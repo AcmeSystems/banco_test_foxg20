@@ -31,7 +31,6 @@ GPIO.setup(power_on, GPIO.OUT)
 GPIO.setup(chip_enable, GPIO.OUT)
 GPIO.setup(switch_up, GPIO.IN,pull_up_down=GPIO.PUD_UP)
 GPIO.setup(switch_down, GPIO.IN,pull_up_down=GPIO.PUD_UP)
-GPIO.setup(home_state, GPIO.IN,pull_up_down=GPIO.PUD_UP)
 
 GPIO.output(chip_enable,0)
 GPIO.output(power_on,0)

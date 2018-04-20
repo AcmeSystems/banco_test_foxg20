@@ -39,6 +39,7 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False) 
 GPIO.setup(power_on, GPIO.OUT)
 GPIO.setup(chip_enable, GPIO.OUT)
+GPIO.setup(home_state, GPIO.IN,pull_up_down=GPIO.PUD_UP)
 
 GPIO.output(chip_enable,0)
 GPIO.output(power_on,0)
@@ -144,7 +145,16 @@ token=""
 print "Banco test FOX Board G20"
 
 while True:
-	#time.sleep(0.2)
+	if GPIO.input(home_state)==0:
+		state=4
+		
+		while GPIO.input(home_state)==1:
+			time.sleep(0.2)
+			pass
+			
+		#Board power-on
+		GPIO.output(power_on,1)
+		time.sleep(0.2)
 
 	if state==0:
 		print "Lancio programmazione serial flash"
