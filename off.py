@@ -33,26 +33,4 @@ GPIO.setup(switch_up, GPIO.IN,pull_up_down=GPIO.PUD_UP)
 GPIO.setup(switch_down, GPIO.IN,pull_up_down=GPIO.PUD_UP)
 
 GPIO.output(chip_enable,0)
-GPIO.output(power_on,0)
-
-print "Monitor"
-
-def startWriting(channel):
-	print "Lancia la programmazione"
-	os.system("/home/pi/banco/flash.py <> /dev/console >&0 2>&1 &")
-
-def stopWriting(channel):
-	print "Stop programmazione"
-	os.system("pkill flash.py &")
-	GPIO.output(chip_enable,0)
-	GPIO.output(power_on,0)
-	#os.system("clear <> /dev/console >&0 2>&1 &")
-	os.system("echo '*********************' <> /dev/console >&0 2>&1 &")
-
-GPIO.add_event_detect(switch_up, GPIO.FALLING, callback=startWriting, bouncetime=500)
-GPIO.add_event_detect(switch_down, GPIO.FALLING, callback=stopWriting, bouncetime=500)
-
-while True:
-	time.sleep(1)
-	
-								
+GPIO.output(power_on,0)								

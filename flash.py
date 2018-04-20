@@ -35,6 +35,11 @@ switch_up=27
 switch_down=28
 home_state=29
 
+#while True:
+#	print "Ciao"
+#	time.sleep(1)
+
+
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False) 
 GPIO.setup(power_on, GPIO.OUT)
@@ -119,11 +124,8 @@ filename = "images/acmeboot_dataflash_1.22.bin"
 #filename = "images/acme_boot_dataflash_117.bin"
 
 #Seriale di connessione con la porta di debug della FOX G20
-serialdevice = "/dev/ttyS0"
-
-#Open the serial port 
 ser = serial.Serial(
-	port=serialdevice, 
+	port="/dev/ttyS0", 
 	baudrate=115200, 
 	timeout=1,
 	parity=serial.PARITY_NONE,
@@ -136,76 +138,76 @@ ser.flushInput()
 # Stati di funzionamento:
 state=0
 
+# 0 - Accende la scheda con CS disabilitato
+# 1 - In attesa di prompt ">" da RomBOOT
+# 2 - Programmazione serial flash con Xmodem
+# 3 - Check messaggi di boot
+
 def terminal():
 	while True:
 		s = ser.read(1) 
 		sys.stdout.write(s)
 
 token=""	
-print "Banco test FOX Board G20"
+print "Banco test FOX Board G20 - 0.4"
 
 while True:
+	# Se premuto il tasto home spegne e riaccende la scheda e passa a stato 4
 	if GPIO.input(home_state)==0:
-		state=4
+		print "Reboot scheda"
+		state=3
 		
 		while GPIO.input(home_state)==1:
 			time.sleep(0.2)
 			pass
 			
-		#Board power-on
+		#Spegne e riaccende la FOX
+		GPIO.output(power_on,0)
+		time.sleep(1)
 		GPIO.output(power_on,1)
-		time.sleep(0.2)
+		time.sleep(0.5)
+		continue
 
 	if state==0:
-		print "Lancio programmazione serial flash"
-
-		#Disable the serial flash CE
+		print "Serial FLASH: Chiude il ponticello"
 		GPIO.output(chip_enable,1)
 
-		#Board power-on
-		GPIO.output(power_on,1)
-		time.sleep(0.2)
+		print "Serial FLASH: Spegne la FOX"
+		GPIO.output(power_on,0)
+		time.sleep(0.5)
 
-		#Enable CE
+		print "Serial FLASH: Accende la FOX"
+		GPIO.output(power_on,1)
+		time.sleep(0.5)
+
+		print "Apre il ponticello"
 		GPIO.output(chip_enable,0)
+
+		ser.flushOutput()
+		ser.flushInput()
+
+		print "Serial FLASH: Invia #"
+		ser.write('#')
+
 		state=1
 		continue
 
 	if state==1:
-		print "Lancio programmazione di test"
-
-		#Board power-on
-		GPIO.output(power_on,1)
-		time.sleep(0.5)
-
-		token=""
-		state=2
-		continue
-			
-	if state==2:
-		print "In attesa di prompt da RomBOOT"
-
-		ser.flushInput()
-		ser.write("#")
-		time.sleep(0.2)
-		if ser.read(1)=='>':
-			state=3
+		# Se arriva il prompt passa allo stato 2
+		print "Serial FLASH: Aspetta >"
+		rtc=ser.read(1)
+		if rtc=='>':
+			print "Serial FLASH: Ricevuto !!",rtc
+			state=2
 			continue
+		else:
+			time.sleep(0.2)
+			continue				
 
-		#Disable the serial flash CE
-		GPIO.output(chip_enable,1)
-
-		#Board power-on
-		GPIO.output(power_on,1)
-		time.sleep(0.2)
-
-		#Enable CE
-		GPIO.output(chip_enable,0)
-		state=2
-		continue
+		# Se non arriva il prompt ritorna allo stato 0
 		
-	if state==3:
-		print "Trasmissione bootloader"
+	if state==2:
+		print "Programmazione serial FLASH"
 		
 		ser.flushInput()
 
@@ -227,14 +229,13 @@ while True:
 		print "  Send: [" + cmdstring + "]"
 		ser.write(cmdstring)
 
-		print "  Programmazione serial flash effettuata"
+		print "Programmazione serial flash effettuata"
 
-		#terminal()
-		
-		state=4
+		token=""
+		state=3
 		continue
 
-	if state==4:
+	if state==3:
 		s = ser.read(1) 
 		sys.stdout.write(s)
 		sys.stdout.flush()
@@ -310,7 +311,7 @@ while True:
 			
 			state=6
 			print 
-			print "End..."
+			print "Fine. Forever looop..."
 			
 			while True:
 				time.sleep(1)
