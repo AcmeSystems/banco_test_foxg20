@@ -1,0 +1,13 @@
+[Unit]
+Description=Banco di test FOX Board
+After=network.target
+
+[Service]
+Type=idle
+WorkingDirectory=/home/pi/banco
+ExecStart=/usr/bin/python monitor.py
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
