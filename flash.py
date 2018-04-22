@@ -27,27 +27,33 @@ color_text = "\x1B[30;43m"
 color_normal = "\x1B[0m" 
 clearscreen = "\x1B[2J"
 cursorhome = "\x1B[H"
+normal_text = "\x1B[0m" 
+
+# Nuovi colori VT100 da usare
+# http://www.termsys.demon.co.uk/vtansi.htm
+
+color_green = "\x1B[32;40m"
+color_white = "\x1B[37;40m"
+
+backcolor_orange = "\x1B[30;43m" 
+
+request_message = color_green + " --> "
 
 # GPIO usati per inviare comandi
-power_on=25
+fox_power=25
 chip_enable=26
 switch_up=27
 switch_down=28
 home_state=29
 
-#while True:
-#	print "Ciao"
-#	time.sleep(1)
-
-
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False) 
-GPIO.setup(power_on, GPIO.OUT)
+GPIO.setup(fox_power, GPIO.OUT)
 GPIO.setup(chip_enable, GPIO.OUT)
 GPIO.setup(home_state, GPIO.IN,pull_up_down=GPIO.PUD_UP)
 
 GPIO.output(chip_enable,0)
-GPIO.output(power_on,0)
+GPIO.output(fox_power,0)
 
 elenco_test = {
 	"AcmeBoot 1.22":"-",	
@@ -126,6 +132,7 @@ filename = "images/acmeboot_dataflash_1.22.bin"
 #Seriale di connessione con la porta di debug della FOX G20
 ser = serial.Serial(
 	port="/dev/ttyS0", 
+	#port="/dev/ttyUSB0", 
 	baudrate=115200, 
 	timeout=1,
 	parity=serial.PARITY_NONE,
@@ -134,185 +141,143 @@ ser = serial.Serial(
 )  
 ser.flushInput()
 
-
-# Stati di funzionamento:
-state=0
-
-# 0 - Accende la scheda con CS disabilitato
-# 1 - In attesa di prompt ">" da RomBOOT
-# 2 - Programmazione serial flash con Xmodem
-# 3 - Check messaggi di boot
-
-def terminal():
-	while True:
-		s = ser.read(1) 
-		sys.stdout.write(s)
-
 token=""	
-print "Banco test FOX Board G20 - 0.4"
+print backcolor_orange + "\nBanco test FOX Board G20 - 0.02" + color_white
 
+GPIO.output(fox_power,0)
+time.sleep(1)
+
+GPIO.output(fox_power,1)
+time.sleep(1)
+print request_message +  "Togli il ponticello"  + color_white
+time.sleep(2)
+
+print "Attesa '>' dalla fox"
+ser.write('#')
+
+#Ricezione continua fino a prompt >
 while True:
-	# Se premuto il tasto home spegne e riaccende la scheda e passa a stato 4
-	if GPIO.input(home_state)==0:
-		print "Reboot scheda"
-		state=3
-		
-		while GPIO.input(home_state)==1:
-			time.sleep(0.2)
-			pass
-			
-		#Spegne e riaccende la FOX
-		GPIO.output(power_on,0)
+	c=ser.read(1)
+	sys.stdout.write(c)
+
+	if c=='>':
+		print "Ricevuto '>'"
+		break
+
+print "Inizio programmazione serial flash"
+
+address=0x200000
+cmdstring = "S%06X,#" % (address)
+print "  Send: [" + cmdstring + "]"
+ser.flushInput()
+ser.write(cmdstring)
+
+stream = open(filename + "_patched", 'rb')
+x.send(stream)
+stream.close()
+
+while ser.read(1)!='>':
+	time.sleep(0.1)
+
+macUpdate(filename)
+
+cmdstring = "G200000#"
+print "  Send: [" + cmdstring + "]"
+ser.write(cmdstring)
+
+print "Fine programmazione flash"
+
+token=""
+while True:
+	c=ser.read(1)
+	sys.stdout.write(c)
+	token += c
+	pos = token.find("Linux")
+	if pos >= 0:
+		GPIO.output(fox_power,0)
 		time.sleep(1)
-		GPIO.output(power_on,1)
-		time.sleep(0.5)
-		continue
+		GPIO.output(fox_power,1)
+		break
 
-	if state==0:
-		print "Serial FLASH: Chiude il ponticello"
-		GPIO.output(chip_enable,1)
+# Inizio test
+token=""
+while True:
+	s = ser.read(1) 
+	sys.stdout.write(s)
+	sys.stdout.flush()
+	token += s
 
-		print "Serial FLASH: Spegne la FOX"
-		GPIO.output(power_on,0)
-		time.sleep(0.5)
-
-		print "Serial FLASH: Accende la FOX"
-		GPIO.output(power_on,1)
-		time.sleep(0.5)
-
-		print "Apre il ponticello"
-		GPIO.output(chip_enable,0)
-
-		ser.flushOutput()
-		ser.flushInput()
-
-		print "Serial FLASH: Invia #"
-		ser.write('#')
-
-		state=1
-		continue
-
-	if state==1:
-		# Se arriva il prompt passa allo stato 2
-		print "Serial FLASH: Aspetta >"
-		rtc=ser.read(1)
-		if rtc=='>':
-			print "Serial FLASH: Ricevuto !!",rtc
-			state=2
-			continue
-		else:
-			time.sleep(0.2)
-			continue				
-
-		# Se non arriva il prompt ritorna allo stato 0
-		
-	if state==2:
-		print "Programmazione serial FLASH"
-		
-		ser.flushInput()
-
-		address=0x200000
-		cmdstring = "S%06X,#" % (address)
-		print "  Send: [" + cmdstring + "]"
-		ser.write(cmdstring)
-
-		stream = open(filename + "_patched", 'rb')
-		x.send(stream)
-		stream.close()
-
-		while ser.read(1)!='>':
-			time.sleep(0.1)
-
-		macUpdate(filename)
-
-		cmdstring = "G200000#"
-		print "  Send: [" + cmdstring + "]"
-		ser.write(cmdstring)
-
-		print "Programmazione serial flash effettuata"
-
+	pos = token.find("AcmeBoot 1.22")
+	if pos >= 0:
 		token=""
-		state=3
+		elenco_test["AcmeBoot 1.22"]="OK"
 		continue
 
-	if state==3:
-		s = ser.read(1) 
-		sys.stdout.write(s)
-		sys.stdout.flush()
-		token += s
+	pos = token.find("sda1")
+	if pos >= 0:
+		token=""
+		elenco_test["sda1"]="OK"
+		continue
 
-		pos = token.find("AcmeBoot 1.22")
-		if pos >= 0:
-			token=""
-			elenco_test["AcmeBoot 1.22"]="OK"
-			continue
- 	
-		pos = token.find("sda1")
-		if pos >= 0:
-			token=""
-			elenco_test["sda1"]="OK"
-			continue
+	pos = token.find("sdb1")
+	if pos >= 0:
+		token=""
+		elenco_test["sdb1"]="OK"
+		continue
 
-		pos = token.find("sdb1")
-		if pos >= 0:
-			token=""
-			elenco_test["sdb1"]="OK"
-			continue
+	pos = token.find("netusg20 login:")
+	if pos >= 0:
+		token=""
+		elenco_test["login"]="OK"
+		ser.write("root\r")
+		continue
 
-		pos = token.find("netusg20 login:")
-		if pos >= 0:
-			token=""
-			elenco_test["login"]="OK"
-			ser.write("root\r")
-			continue
+	pos = token.find("Password:")
+	if pos >= 0:
+		token=""
+		elenco_test["password"]="OK"
+		ser.write("netusg20\r")
+		time.sleep(0.5)
+		ser.write("./gpio.py\r")
+		continue
 
-		pos = token.find("Password:")
-		if pos >= 0:
-			token=""
-			elenco_test["password"]="OK"
-			ser.write("netusg20\r")
-			time.sleep(0.5)
-			ser.write("./gpio.py\r")
-			continue
+	pos = token.find("GPIO test OK")
+	if pos >= 0:
+		token=""
+		dataoracorrente=datetime.datetime.now().strftime("%m%d%H%M%Y")
+		comando =  "date " + dataoracorrente + "\r"
+		ser.write(comando)
 
-		pos = token.find("GPIO test OK")
-		if pos >= 0:
-			token=""
-			dataoracorrente=datetime.datetime.now().strftime("%m%d%H%M%Y")
-			comando =  "date " + dataoracorrente + "\r"
-			ser.write(comando)
+		elenco_test["gpio"]="OK"
+		continue
 
-			elenco_test["gpio"]="OK"
-			continue
+	pos = token.find("200 OK")
+	if pos >= 0:
+		token=""
 
-		pos = token.find("200 OK")
-		if pos >= 0:
-			token=""
+		ser.write("halt\r")
 
-			ser.write("halt\r")
+		elenco_test["eth0"]="OK"
+		continue
 
-			elenco_test["eth0"]="OK"
-			continue
+	pos = token.find("Power down")
+	if pos >= 0:
+		token=""
+		print "\n"
+		print color_text + " Risultato finale dei test" + color_normal
+		print "\n"
 
-		pos = token.find("Power down")
-		if pos >= 0:
-			token=""
-			print "\n"
-			print color_text + " Risultato finale dei test" + color_normal
-			print "\n"
+		for test in elenco_test:
+			print "%16s -> " % (test),
 
-			for test in elenco_test:
-				print "%16s -> " % (test),
-
-				if elenco_test[test]=="OK":
-					print color_pass + " OK" + color_normal
-				else:
-					print color_warning + "error" + color_normal
-			
-			state=6
-			print 
-			print "Fine. Forever looop..."
-			
-			while True:
-				time.sleep(1)
-				
+			if elenco_test[test]=="OK":
+				print color_pass + " OK" + color_normal
+			else:
+				print color_warning + "error" + color_normal
+	
+		print 
+		print "Fine. Forever looop..."
+	
+		while True:
+			time.sleep(1)
+		

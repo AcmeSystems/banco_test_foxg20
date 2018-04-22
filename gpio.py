@@ -30,6 +30,7 @@ test = {
 		["29","30"],
 		["31","32"],
 		["37","38"],
+		["24","36"],
 	],
 	"J7" : [
 		["3",  "4"],
@@ -73,7 +74,7 @@ for connector_index, connector_item in enumerate(test):
 
 				pin_out = fox.Pin(connector_item,test_item[1],'low')
 				pin_in = fox.Pin(connector_item,test_item[0],'in')
-
+	
 				if pin_in.get_value()<>0:
 					print "gpio error %s.%s = low ->  %s.%s" % (connector_item,test_item[1],connector_item,test_item[0])
 					error_counter = error_counter + 1
@@ -93,7 +94,8 @@ for connector_index, connector_item in enumerate(test):
 
 print "GPIO test OK"
 os.system("rm index.html");
-os.system("wget http://192.168.1.1");
+os.system("wget http://192.168.1.242");
+
 
 
 
