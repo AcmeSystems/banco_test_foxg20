@@ -142,7 +142,7 @@ ser = serial.Serial(
 ser.flushInput()
 
 token=""	
-print backcolor_orange + "\nBanco test FOX Board G20 - 0.02" + color_white
+print backcolor_orange + "\nBanco test FOX Board G20 - 1.01" + color_white
 
 GPIO.output(fox_power,0)
 time.sleep(1)
@@ -152,7 +152,7 @@ time.sleep(1)
 print request_message +  "Togli il ponticello"  + color_white
 time.sleep(2)
 
-print "Attesa '>' dalla fox"
+print "Attesa ricezione '>'"
 ser.write('#')
 
 #Ricezione continua fino a prompt >
@@ -251,7 +251,7 @@ while True:
 		elenco_test["gpio"]="OK"
 		continue
 
-	pos = token.find("200 OK")
+	pos = token.find("LAN test OK")
 	if pos >= 0:
 		token=""
 

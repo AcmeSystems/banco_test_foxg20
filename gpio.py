@@ -5,9 +5,7 @@
 
 import time
 import fox
-import serial
-import sys
-import os
+import urllib2
 
 # Test GPIO
 
@@ -93,8 +91,17 @@ for connector_index, connector_item in enumerate(test):
 					time.sleep(1)
 
 print "GPIO test OK"
-os.system("rm index.html");
-os.system("wget http://192.168.1.242");
+
+for i in range(1,5):
+	try:
+		contents = urllib2.urlopen("http://192.168.1.242/index.html").read()
+		print "LAN test OK (try %d)" % i
+		break	
+	except:
+		print "LAN error (try %d)" % i 
+		time.sleep(1)
+		continue
+
 
 
 
