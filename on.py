@@ -19,7 +19,7 @@ import RPi.GPIO as GPIO
 import os
 
 # GPIO usati per inviare comandi
-power_on=25
+power_on=31
 chip_enable=26
 switch_up=27
 switch_down=28

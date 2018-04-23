@@ -40,7 +40,7 @@ backcolor_orange = "\x1B[30;43m"
 request_message = color_green + " --> "
 
 # GPIO usati per inviare comandi
-fox_power=25
+fox_power=31
 chip_enable=26
 switch_up=27
 switch_down=28

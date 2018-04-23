@@ -10,7 +10,7 @@ import RPi.GPIO as GPIO
 import serial
 import sys
 
-power_on=25
+power_on=31
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False) 
